@@ -21,12 +21,12 @@ targets:
   patterns:
     - prefix: "gpu"
       start: 1
-      end: 3
+      end: 37
       format: "{prefix}{number:02}"
       username: "afs219"  # Override for all targets in this pattern
     - prefix: "ray"
       start: 1
-      end: 5
+      end: 27
       format: "{prefix}{number:02}"
       # No username or key_path specified, will use defaults
 
@@ -36,7 +36,7 @@ display:
 
 # Debug Configuration
 debug:
-  enabled: false
+  enabled: true
   log_dir: "logs"
   log_file: "gpu_checker.log"
   log_max_size: 5242880  # 5MB in bytes

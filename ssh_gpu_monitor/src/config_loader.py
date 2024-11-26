@@ -7,6 +7,10 @@ def get_default_config_path() -> Path:
     """Return the default config path for the package."""
     return Path(__file__).parent.parent / 'config' / 'config.yaml' 
 
+def get_project_root() -> Path:
+    """Return the root directory of the project."""
+    return Path(__file__).parent.parent.parent
+
 class Target(NamedTuple):
     """Represents a target with its associated username and key path"""
     host: str
@@ -129,9 +133,23 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
                 # Set the value
                 current[sections[-1]] = value
     
-    # Create log directory if debug is enabled
+    # Make log paths absolute using project root
     if config['debug']['enabled']:
+        project_root = get_project_root()
+        # Ensure log_dir is an absolute path
         log_dir = Path(config['debug']['log_dir'])
-        log_dir.mkdir(exist_ok=True)
+        if not log_dir.is_absolute():
+            log_dir = project_root / log_dir
+        
+        # Create log directory
+        log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Update config with absolute paths
+        config['debug']['log_dir'] = str(log_dir)
+        config['debug']['log_file'] = str(log_dir / config['debug']['log_file'])
+        
+        # Print debug info about paths
+        print(f"Log directory: {config['debug']['log_dir']}")
+        print(f"Log file: {config['debug']['log_file']}")
     
     return config

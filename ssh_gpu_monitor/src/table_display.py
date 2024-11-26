@@ -3,7 +3,12 @@ from rich.console import Console
 from rich.table import Table
 from rich.live import Live
 from rich.align import Align
-from rich.panel import Panel  # Add this import
+from rich.panel import Panel
+from rich.layout import Layout
+from rich.text import Text
+from rich.style import Style
+from collections import deque
+from datetime import datetime
 
 class GPUTable:
     def __init__(self):
@@ -17,8 +22,55 @@ class GPUTable:
             "GPU %": 6,
             "Memory": 15
         }
+        # Add message queue for status updates
+        self.messages = deque(maxlen=5)  # Keep last 5 messages
+        
+        # Create layout
+        self.layout = Layout()
+        self.layout.split(
+            Layout(name="status", size=7),
+            Layout(name="table")
+        )
+        
+        # Add initial status message
+        self.add_status("Initializing GPU checker...", "blue")
+        
+        # Create initial table
         self._create_table()
         self.data = {}
+        self.layout["table"].update(self.table)
+
+    def add_status(self, message: str, style: str = "white") -> None:
+        """Add a status message to the display"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.messages.append((timestamp, message, style))
+        self._update_layout()
+
+    def _create_status_panel(self) -> Panel:
+        """Create the status panel with messages"""
+        if not self.messages:
+            return Panel(
+                Align.left("No status updates"),
+                title="Status",
+                border_style="blue",
+                height=7
+            )
+        
+        messages = []
+        for timestamp, msg, style in self.messages:
+            messages.append(Text.from_markup(f"[{timestamp}] [{style}]{msg}[/]"))
+        
+        return Panel(
+            Align.left("\n".join(str(msg) for msg in messages)),
+            title="Status",
+            border_style="blue",
+            height=7
+        )
+
+    def _update_layout(self) -> None:
+        """Update the layout with current status and table"""
+        self.layout["status"].update(self._create_status_panel())
+        self.layout["table"].update(self.table)
 
     def _create_table(self):
         """Create the table with proper columns"""
@@ -40,6 +92,7 @@ class GPUTable:
         self.raw_table.add_column("Memory", style="green", justify="right", min_width=self.max_widths["Memory"])
 
         self.table = Align.center(self.raw_table)
+        self._update_layout()
 
     def update_max_widths(self, hostname: str, values: list[str]) -> None:
         """Update the maximum widths based on new values"""
@@ -146,11 +199,12 @@ class GPUTable:
         """Show goodbye message instead of table"""
         goodbye_msg = "Goodbye! 👋"
         self.table = Align.center(Panel.fit(goodbye_msg))
+        self._update_layout()
 
     def get_live_table(self) -> Live:
         """Get a Live display context manager for the table"""
         return Live(
-            self.table,  # Use the padded display instead of the raw table
+            self.layout,  # Use the full layout instead of just the table
             refresh_per_second=4,
             console=self.console,
             vertical_overflow="visible"
